@@ -1,15 +1,41 @@
 package br.ifsuldeminas.connections;
 
-import java.io.File;
+import java.io.Serializable;
 
-public class Arquivo {
+public class Arquivo implements Serializable {
 
-    private String nomeArquivo;
-    private File arquivo;
+    private final byte[] arquivoBytes;
+    private final String nomeArquivo;
+    private final boolean ehDiretorio;
+    private final String diretorioPai;
 
-    public Arquivo(String nomeArquivo, File arquivo) {
+    public Arquivo(byte[] arquivoBytes, String nomeArquivo, boolean ehDiretorio) {
+        this.arquivoBytes = arquivoBytes;
         this.nomeArquivo = nomeArquivo;
-        this.arquivo = arquivo;
-        //System.out.println("Arquivo: " + this.nomeArquivo + "\nPath: " + arquivo.getPath());
+        this.ehDiretorio = ehDiretorio;
+        this.diretorioPai = "";
+    }
+
+    public Arquivo(byte[] arquivoBytes, String nomeArquivo, boolean ehDiretorio, String diretorioPai) {
+        this.arquivoBytes = arquivoBytes;
+        this.nomeArquivo = nomeArquivo;
+        this.ehDiretorio = ehDiretorio;
+        this.diretorioPai = diretorioPai;
+    }
+
+    public byte[] getArquivoBytes() {
+        return arquivoBytes;
+    }
+
+    public String getNomeArquivo() {
+        return nomeArquivo;
+    }
+
+    public boolean ehDiretorio() {
+        return ehDiretorio;
+    }
+
+    public String getDiretorioPai() {
+        return diretorioPai;
     }
 }
