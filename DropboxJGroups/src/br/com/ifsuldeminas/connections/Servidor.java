@@ -4,12 +4,12 @@ import br.com.ifsuldeminas.models.Arquivo;
 import br.com.ifsuldeminas.enums.Codigo;
 import java.io.*;
 import java.util.*;
+import java.util.regex.Pattern;
 import org.jgroups.*;
 import org.jgroups.util.*;
 
 public class Servidor extends ReceiverAdapter {
 
-    private JChannel channel;
     private static String nomeServidor;
     private final ArrayList<Arquivo> listaArquivosEstado;
 
@@ -21,7 +21,7 @@ public class Servidor extends ReceiverAdapter {
 
     public void tentarConexao() {
         try {
-            channel = new JChannel()
+            new JChannel()
                     .setName(nomeServidor)
                     .connect("Servico")
                     .setReceiver(this)
@@ -46,8 +46,14 @@ public class Servidor extends ReceiverAdapter {
             case CRIAR_PASTA:
                 criarPasta(arquivoRecebido);
                 break;
-            case DELETAR:
-                deletar(arquivoRecebido);
+            case APAGAR_ARQUIVO:
+                apagarArquivo(arquivoRecebido);
+                break;
+            case APAGAR_PASTA:
+                apagarPasta(arquivoRecebido);
+                break;
+            case MODIFICAR_PASTA:
+                modificarPasta(arquivoRecebido);
                 break;
             default:
                 System.out.println("CÓDIGO INVÁLIDO");
@@ -81,11 +87,42 @@ public class Servidor extends ReceiverAdapter {
                 .mkdirs();
     }
 
-    public void deletar(Arquivo arquivo) {
+    public void apagarArquivo(Arquivo arquivo) {
         new File("../Servidores/" + nomeServidor
                 + "/" + arquivo.getDiretorioArquivo()
                 + "/" + arquivo.getNomeArquivo())
                 .delete();
+    }
+
+    public void apagarPasta(Arquivo pasta) {
+        System.out.println("..\\Servidores\\" + nomeServidor
+                + pasta.getDiretorioArquivo());
+        File[] arquivosDaPasta = new File("..\\Servidores\\" + nomeServidor
+                + pasta.getDiretorioArquivo()).listFiles();
+
+        for (File arquivosDaPasta1 : arquivosDaPasta) {
+            apagarArquivo(new Arquivo(null,
+                    arquivosDaPasta1.getName(),
+                    arquivosDaPasta1.getParent()
+                            .split(Pattern.quote("..\\Servidores\\" + nomeServidor + "\\"))[1],
+                    null));
+        }
+        apagarArquivo(pasta);
+    }
+
+    public void modificarPasta(Arquivo pasta) {
+        File[] arquivosDaPasta = new File("..\\Servidores\\"
+                + nomeServidor + pasta.getDiretorioArquivo()
+                + "\\" + pasta.getNomeArquivo()).listFiles();
+        
+        for (File arquivosDaPasta1 : arquivosDaPasta) {
+            apagarArquivo(new Arquivo(null,
+                    arquivosDaPasta1.getName(),
+                    arquivosDaPasta1.getParent()
+                            .split(Pattern.quote("..\\Servidores\\" + nomeServidor + "\\"))[1],
+                    null));
+        }
+        apagarArquivo(pasta);
     }
 
     @Override
@@ -113,13 +150,13 @@ public class Servidor extends ReceiverAdapter {
                 criarArquivo(arquivo);
             } else if (arquivo.getCodigo() == Codigo.CRIAR_PASTA) {
                 criarPasta(arquivo);
-            } else if(arquivo.getCodigo() == Codigo.DELETAR) {
-                deletar(arquivo);
+            } else if (arquivo.getCodigo() == Codigo.APAGAR_ARQUIVO) {
+                apagarArquivo(arquivo);
             }
         }
     }
 
     public static void main(String[] args) throws Exception {
-        new Servidor(2).tentarConexao();
+        new Servidor(3).tentarConexao();
     }
 }

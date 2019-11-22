@@ -14,7 +14,7 @@ public class Arquivo implements Serializable {
     public Arquivo(byte[] arquivoBytes, String nomeArquivo, String diretorioArquivo, Codigo codigo) {
         this.arquivoBytes = arquivoBytes;
         this.nomeArquivo = nomeArquivo;
-        this.diretorioArquivo = diretorioArquivo.split(Pattern.quote("..\\Clientes"))[1];
+        this.diretorioArquivo = diretorioArquivo;
         this.codigo = codigo;
     }
 

@@ -7,6 +7,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
 import java.util.*;
+import java.util.regex.Pattern;
 import org.jgroups.*;
 import org.jgroups.util.Util;
 
@@ -63,30 +64,64 @@ public class Cliente extends ReceiverAdapter {
                 if (kind == ENTRY_CREATE || kind == ENTRY_MODIFY) {
                     byte[] arquivoBytes = null;
 
-                    if (!arquivoOrigem.isDirectory()) {
-                        arquivoBytes = arquivoParaBytes(arquivoOrigem);
-                    }
-
-                    try {
-                        if (Files.isDirectory(diretorioArquivo)) {
-                            walkAndRegisterDirectories(diretorioArquivo);
-                        } else {
-                            Arquivo novoArquivo = new Arquivo(arquivoBytes,
-                                    arquivoOrigem.getName(), dir.toString(), Codigo.CRIAR_ARQUIVO);
-                            channel.send(new Message(null, novoArquivo));
-
-                            synchronized (listaArquivosEstado) {
-                                listaArquivosEstado.add(novoArquivo);
-                            }
+                    if (new File(dir.toString()).exists()) {
+                        if (!arquivoOrigem.isDirectory()) {
+                            arquivoBytes = arquivoParaBytes(arquivoOrigem);
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
 
+                        try {
+                            if (Files.isDirectory(diretorioArquivo)) {
+                                walkAndRegisterDirectories(diretorioArquivo);
+                                if (kind == ENTRY_CREATE) {
+                                    File[] listaDeArquivos = new File(diretorioArquivo.toString()).listFiles();
+
+                                    for (File arquivo : listaDeArquivos) {
+                                        arquivoBytes = arquivoParaBytes(arquivo);
+
+                                        Arquivo novoArquivo = new Arquivo(arquivoBytes,
+                                                arquivo.getName(),
+                                                diretorioArquivo.toString().split(Pattern.quote("..\\Clientes"))[1],
+                                                Codigo.CRIAR_ARQUIVO);
+
+                                        channel.send(new Message(null, novoArquivo));
+                                    }
+                                }
+                            } else {
+                                Arquivo novoArquivo = new Arquivo(arquivoBytes,
+                                        arquivoOrigem.getName(),
+                                        dir.toString().split(Pattern.quote("..\\Clientes"))[1],
+                                        Codigo.CRIAR_ARQUIVO);
+
+                                channel.send(new Message(null, novoArquivo));
+
+                                synchronized (listaArquivosEstado) {
+                                    listaArquivosEstado.add(novoArquivo);
+                                }
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        channel.send(new Message(null,
+                                new Arquivo(null,
+                                        "",
+                                        dir.toString().split(Pattern.quote("..\\Clientes"))[1],
+                                        Codigo.APAGAR_PASTA)));
+                    }
                 } else if (kind == ENTRY_DELETE) {
-                    Arquivo pasta = new Arquivo(null,
-                            arquivoOrigem.getName(), dir.toString(), Codigo.DELETAR);
-                    channel.send(new Message(null, pasta));
+                    if (new File(diretorioArquivo.toString()).exists()) {
+                        Arquivo pasta = new Arquivo(null,
+                                arquivoOrigem.getName(),
+                                dir.toString().split(Pattern.quote("..\\Clientes"))[1],
+                                Codigo.APAGAR_ARQUIVO);
+                        channel.send(new Message(null, pasta));
+                    } else {
+                        Arquivo pasta = new Arquivo(null,
+                                arquivoOrigem.getName(),
+                                dir.toString().split(Pattern.quote("..\\Clientes"))[1],
+                                Codigo.MODIFICAR_PASTA);
+                        channel.send(new Message(null, pasta));
+                    }
                 } else {
                     System.out.println("Código Inválido");
                 }
@@ -133,8 +168,45 @@ public class Cliente extends ReceiverAdapter {
         WatchKey key = dir.register(watcher, ENTRY_CREATE, ENTRY_DELETE, ENTRY_MODIFY);
         keys.put(key, dir);
         if (!dir.getParent().toString().equals("..\\Clientes")) {
-            channel.send(new Message(null, new Arquivo(null, dir.getFileName().toString(), dir.toString(), Codigo.CRIAR_PASTA)));
+            channel.send(new Message(null,
+                    new Arquivo(null,
+                            dir.getFileName().toString(),
+                            dir.toString().split(Pattern.quote("..\\Clientes"))[1],
+                            Codigo.CRIAR_PASTA)));
         }
+    }
+
+    public void criarArquivo(Arquivo arquivo) {
+        new File("../Clientes/"
+                + "/" + arquivo.getDiretorioArquivo())
+                .mkdirs();
+
+        File novoArquivo = new File("../Clientes/"
+                + "/" + arquivo.getDiretorioArquivo()
+                + "/" + arquivo.getNomeArquivo());
+        try {
+            byte[] arquivoRecebidoBytes = arquivo.getArquivoBytes();
+            FileOutputStream fos = new FileOutputStream(novoArquivo);
+            fos.write(arquivoRecebidoBytes, 0, arquivoRecebidoBytes.length);
+            fos.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void criarPasta(Arquivo pasta) {
+        new File("../Clientes/"
+                + "/" + pasta.getDiretorioArquivo())
+                .mkdirs();
+    }
+
+    public void deletar(Arquivo arquivo) {
+        new File("../Clientes/"
+                + "/" + arquivo.getDiretorioArquivo()
+                + "/" + arquivo.getNomeArquivo())
+                .delete();
     }
 
     @Override
@@ -151,7 +223,17 @@ public class Cliente extends ReceiverAdapter {
             listaArquivosEstado.clear();
             listaArquivosEstado.addAll(lista);
         }
-        System.out.println("received state (" + lista.size() + " files in folder history):");
+
+        for (Arquivo arquivo : listaArquivosEstado) {
+            if (arquivo.getCodigo() == Codigo.CRIAR_ARQUIVO) {
+                criarArquivo(arquivo);
+            } else if (arquivo.getCodigo() == Codigo.CRIAR_PASTA) {
+                criarPasta(arquivo);
+            } else if (arquivo.getCodigo() == Codigo.APAGAR_ARQUIVO) {
+                deletar(arquivo);
+            }
+        }
+
     }
 
     public static void main(String[] args) {
