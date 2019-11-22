@@ -1,26 +1,18 @@
 package br.ifsuldeminas.connections;
 
 import java.io.Serializable;
+import java.util.regex.Pattern;
 
 public class Arquivo implements Serializable {
 
     private final byte[] arquivoBytes;
     private final String nomeArquivo;
-    private final boolean ehDiretorio;
-    private final String diretorioPai;
+    private final String diretorioArquivo;
 
-    public Arquivo(byte[] arquivoBytes, String nomeArquivo, boolean ehDiretorio) {
+    public Arquivo(byte[] arquivoBytes, String nomeArquivo, String diretorioArquivo) {
         this.arquivoBytes = arquivoBytes;
         this.nomeArquivo = nomeArquivo;
-        this.ehDiretorio = ehDiretorio;
-        this.diretorioPai = "";
-    }
-
-    public Arquivo(byte[] arquivoBytes, String nomeArquivo, boolean ehDiretorio, String diretorioPai) {
-        this.arquivoBytes = arquivoBytes;
-        this.nomeArquivo = nomeArquivo;
-        this.ehDiretorio = ehDiretorio;
-        this.diretorioPai = diretorioPai;
+        this.diretorioArquivo = diretorioArquivo.split(Pattern.quote("..\\Clientes"))[1];
     }
 
     public byte[] getArquivoBytes() {
@@ -30,12 +22,8 @@ public class Arquivo implements Serializable {
     public String getNomeArquivo() {
         return nomeArquivo;
     }
-
-    public boolean ehDiretorio() {
-        return ehDiretorio;
-    }
-
-    public String getDiretorioPai() {
-        return diretorioPai;
+    
+    public String getDiretorioArquivo() {
+        return diretorioArquivo;
     }
 }

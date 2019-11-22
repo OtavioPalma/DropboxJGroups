@@ -7,6 +7,7 @@ import org.jgroups.util.*;
 
 public class Servidor extends ReceiverAdapter {
 
+    private JChannel channel;
     private static String nomeServidor;
     private final ArrayList<Arquivo> listaArquivosEstado;
 
@@ -18,47 +19,45 @@ public class Servidor extends ReceiverAdapter {
 
     public void tentarConexao() {
         try {
-            new JChannel()
+            channel = new JChannel()
                     .setName(nomeServidor)
-                    .connect("Servico")
-                    .setReceiver(this);
+                    .setReceiver(this)
+                    .connect("Servico");
+
+            channel.send(new Message(null, "sincronizar"));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void receive(Message arquivo) {
-        Arquivo arquivoRecebido = arquivo.getObject();
+    @Override
+    public void receive(Message mensagemRecebida) {
+        Arquivo arquivoRecebido = mensagemRecebida.getObject();
 
-        if (arquivoRecebido.ehDiretorio()) {
-            new File("../Servidores/" + nomeServidor
-                    + "/" + arquivo.src()
-                    + "/" + arquivoRecebido.getNomeArquivo())
-                    .mkdirs();
-        } else {
-            if (arquivoRecebido.getArquivoBytes() != null) {
-                File novoArquivo = new File("../Servidores/" + nomeServidor
-                        + "/" + arquivo.src()
-                        + "/" + arquivoRecebido.getDiretorioPai()
-                        + "/" + arquivoRecebido.getNomeArquivo());
+        if (arquivoRecebido.getArquivoBytes() != null) {
+            File novoArquivo = new File("../Servidores/" + nomeServidor
+                    + "/" + arquivoRecebido.getDiretorioArquivo()
+                    + "/" + arquivoRecebido.getNomeArquivo());
 
-                new File("../Servidores/" + nomeServidor
-                        + "/" + arquivo.src()
-                        + "/" + arquivoRecebido.getDiretorioPai())
-                        .mkdirs();
-                try {
-                    byte[] arquivoRecebidoBytes = arquivoRecebido.getArquivoBytes();
-                    FileOutputStream fos = new FileOutputStream(novoArquivo);
-                    fos.write(arquivoRecebidoBytes, 0, arquivoRecebidoBytes.length);
-                    fos.close();
-                } catch (FileNotFoundException e) {
-                    e.printStackTrace();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            } else {
+            try {
+                byte[] arquivoRecebidoBytes = arquivoRecebido.getArquivoBytes();
+                FileOutputStream fos = new FileOutputStream(novoArquivo);
+                fos.write(arquivoRecebidoBytes, 0, arquivoRecebidoBytes.length);
+                fos.close();
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        new File("../Servidores/" + nomeServidor
+                + "/" + arquivoRecebido.getDiretorioArquivo())
+                .mkdirs();
+
+        /*}else {
                 File arquivoDeleta = new File("../Servidores/" + nomeServidor
-                        + "/" + arquivo.src()
+                        + "/" + mensagemRecebida.src()
                         + "/" + arquivoRecebido.getDiretorioPai()
                         + "/" + arquivoRecebido.getNomeArquivo());
                 if (arquivoDeleta.delete()) {
@@ -66,8 +65,7 @@ public class Servidor extends ReceiverAdapter {
                 } else {
                     System.out.println("Arquivo Inexistente");
                 }
-            }
-        }
+            }*/
     }
 
     @Override
@@ -76,6 +74,6 @@ public class Servidor extends ReceiverAdapter {
     }
 
     public static void main(String args[]) throws Exception {
-        new Servidor(1).tentarConexao();
+        new Servidor(3).tentarConexao();
     }
 }
