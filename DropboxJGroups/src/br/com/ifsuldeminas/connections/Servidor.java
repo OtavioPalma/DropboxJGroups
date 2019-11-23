@@ -27,7 +27,7 @@ public class Servidor extends ReceiverAdapter {
                     .setReceiver(this)
                     .getState(null, 10000);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("ERRO tentarConexao, " + e.getMessage());
         }
     }
 
@@ -46,14 +46,8 @@ public class Servidor extends ReceiverAdapter {
             case CRIAR_PASTA:
                 criarPasta(arquivoRecebido);
                 break;
-            case APAGAR_ARQUIVO:
-                apagarArquivo(arquivoRecebido);
-                break;
-            case APAGAR_PASTA:
-                apagarPasta(arquivoRecebido);
-                break;
-            case MODIFICAR_PASTA:
-                modificarPasta(arquivoRecebido);
+            case DELETAR:
+                deletar(arquivoRecebido);
                 break;
             default:
                 System.out.println("CÓDIGO INVÁLIDO");
@@ -62,10 +56,6 @@ public class Servidor extends ReceiverAdapter {
     }
 
     public void criarArquivo(Arquivo arquivo) {
-        new File("../Servidores/" + nomeServidor
-                + "/" + arquivo.getDiretorioArquivo())
-                .mkdirs();
-
         File novoArquivo = new File("../Servidores/" + nomeServidor
                 + "/" + arquivo.getDiretorioArquivo()
                 + "/" + arquivo.getNomeArquivo());
@@ -75,54 +65,32 @@ public class Servidor extends ReceiverAdapter {
             fos.write(arquivoRecebidoBytes, 0, arquivoRecebidoBytes.length);
             fos.close();
         } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            System.out.println("ERRO criarArquivo (NotFound), " + e.getMessage());
         } catch (IOException e) {
-            e.printStackTrace();
+            System.out.println("ERRO criarArquivo (IO), " + e.getMessage());
         }
     }
 
     public void criarPasta(Arquivo pasta) {
-        new File("../Servidores/" + nomeServidor
-                + "/" + pasta.getDiretorioArquivo())
-                .mkdirs();
+        File novoArquivo = new File("../Servidores/" + nomeServidor
+                + "/" + pasta.getDiretorioArquivo());
+        novoArquivo.mkdirs();
     }
 
-    public void apagarArquivo(Arquivo arquivo) {
-        new File("../Servidores/" + nomeServidor
+    public void deletar(Arquivo arquivo) {
+        File novoArquivo = new File("../Servidores/" + nomeServidor
                 + "/" + arquivo.getDiretorioArquivo()
-                + "/" + arquivo.getNomeArquivo())
-                .delete();
-    }
+                + "/" + arquivo.getNomeArquivo());
 
-    public void apagarPasta(Arquivo pasta) {
-        System.out.println("..\\Servidores\\" + nomeServidor
-                + pasta.getDiretorioArquivo());
-        File[] arquivosDaPasta = new File("..\\Servidores\\" + nomeServidor
-                + pasta.getDiretorioArquivo()).listFiles();
-
-        for (File arquivosDaPasta1 : arquivosDaPasta) {
-            apagarArquivo(new Arquivo(null,
-                    arquivosDaPasta1.getName(),
-                    arquivosDaPasta1.getParent()
-                            .split(Pattern.quote("..\\Servidores\\" + nomeServidor + "\\"))[1],
-                    null));
+        if (novoArquivo.isDirectory()) {
+            for (File arq : novoArquivo.listFiles()) {
+                arq.delete();
+            }
         }
-        apagarArquivo(pasta);
-    }
-
-    public void modificarPasta(Arquivo pasta) {
-        File[] arquivosDaPasta = new File("..\\Servidores\\"
-                + nomeServidor + pasta.getDiretorioArquivo()
-                + "\\" + pasta.getNomeArquivo()).listFiles();
         
-        for (File arquivosDaPasta1 : arquivosDaPasta) {
-            apagarArquivo(new Arquivo(null,
-                    arquivosDaPasta1.getName(),
-                    arquivosDaPasta1.getParent()
-                            .split(Pattern.quote("..\\Servidores\\" + nomeServidor + "\\"))[1],
-                    null));
+        if (!novoArquivo.delete()) {
+            System.out.println("Erro ao apagar: " + novoArquivo.getName());
         }
-        apagarArquivo(pasta);
     }
 
     @Override
@@ -146,17 +114,23 @@ public class Servidor extends ReceiverAdapter {
         }
 
         for (Arquivo arquivo : listaArquivosEstado) {
-            if (arquivo.getCodigo() == Codigo.CRIAR_ARQUIVO) {
-                criarArquivo(arquivo);
-            } else if (arquivo.getCodigo() == Codigo.CRIAR_PASTA) {
-                criarPasta(arquivo);
-            } else if (arquivo.getCodigo() == Codigo.APAGAR_ARQUIVO) {
-                apagarArquivo(arquivo);
+            switch (arquivo.getCodigo()) {
+                case CRIAR_ARQUIVO:
+                    criarArquivo(arquivo);
+                    break;
+                case CRIAR_PASTA:
+                    criarPasta(arquivo);
+                    break;
+                case DELETAR:
+                    deletar(arquivo);
+                    break;
+                default:
+                    return;
             }
         }
     }
 
     public static void main(String[] args) throws Exception {
-        new Servidor(3).tentarConexao();
+        new Servidor(new Random().nextInt(10000)).tentarConexao();
     }
 }
