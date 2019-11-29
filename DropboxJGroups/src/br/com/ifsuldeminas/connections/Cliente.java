@@ -265,18 +265,20 @@ public class Cliente extends ReceiverAdapter {
         }
 
         for (Arquivo arquivo : listaArquivosEstado) {
-            switch (arquivo.getCodigo()) {
-                case CRIAR_ARQUIVO:
-                    criarArquivo(arquivo);
-                    break;
-                case CRIAR_PASTA:
-                    criarPasta(arquivo);
-                    break;
-                case DELETAR:
-                    deletar(arquivo);
-                    break;
-                default:
-                    return;
+            if (arquivo.getDiretorioArquivo().contains(this.nomeUsuario)) {
+                switch (arquivo.getCodigo()) {
+                    case CRIAR_ARQUIVO:
+                        criarArquivo(arquivo);
+                        break;
+                    case CRIAR_PASTA:
+                        criarPasta(arquivo);
+                        break;
+                    case DELETAR:
+                        deletar(arquivo);
+                        break;
+                    default:
+                        return;
+                }
             }
         }
     }
