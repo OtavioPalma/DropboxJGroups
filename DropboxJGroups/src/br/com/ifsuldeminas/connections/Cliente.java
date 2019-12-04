@@ -7,6 +7,8 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.*;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Pattern;
 import org.jgroups.*;
 import org.jgroups.util.Util;
@@ -16,7 +18,7 @@ public class Cliente extends ReceiverAdapter {
     private JChannel channel;
     private WatchService watcher;
     private final Map<WatchKey, Path> keys;
-    private final String nomeUsuario;
+    private String nomeUsuario;
     private final ArrayList<Arquivo> listaArquivosEstado;
 
     public Cliente(String nomeUsuario) {
@@ -53,6 +55,24 @@ public class Cliente extends ReceiverAdapter {
                 return;
             }
             Path dir = keys.get(key);
+
+            final Thread thread = new Thread(new Runnable() {
+                public void run() {
+                    while (true) {
+                        Scanner command = new Scanner(System.in);
+                        String comando = command.next();
+                        if (comando.equals("Logout")) {
+                            System.exit(0);
+                        } else if (comando.equals("Sair")) {
+                            System.out.println(nomeUsuario + " desconectado.");
+                            System.out.println("Digite seu nome de usuário: ");
+                            Scanner userName = new Scanner(System.in);
+                            nomeUsuario = userName.next();
+                        }
+                    }
+                }
+            });
+            thread.start();
 
             for (WatchEvent<?> event : key.pollEvents()) {
                 WatchEvent.Kind kind = event.kind();
@@ -284,6 +304,8 @@ public class Cliente extends ReceiverAdapter {
     }
 
     public static void main(String[] args) {
-        new Cliente("Otavio").tentarConexao();
+        System.out.println("Digite seu nome de usuário: ");
+        Scanner userName = new Scanner(System.in);
+        new Cliente(userName.next()).tentarConexao();
     }
 }
